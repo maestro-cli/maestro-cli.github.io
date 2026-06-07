@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maestro CLI — orchestrate AI agents from a YAML file</title>
+<meta name="description" content="Turn a YAML file into a parallel, dependency-aware pipeline of AI agents and shell commands — across Codex, Claude, Gemini, Copilot, Qwen, Ollama & Llama.">
+<meta property="og:title" content="Maestro CLI">
+<meta property="og:description" content="Turn a YAML file into a parallel, dependency-aware pipeline of AI agents and shell commands.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://maestro-cli.github.io">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0d12; --bg2:#0f131a; --card:#141923; --line:#222a38;
+    --txt:#e6e9ef; --muted:#9aa4b2; --dim:#6b7484;
+    --gold:#f5c451; --amber:#e8973a; --grad:linear-gradient(120deg,#f5c451,#e8973a);
+    --green:#56d364; --blue:#6cb6ff; --violet:#b794f6;
+    --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--txt);font-family:'Inter',system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 24px}
+  .glow{position:fixed;inset:0;z-index:-1;background:
+    radial-gradient(700px 350px at 50% -5%,rgba(245,196,81,.10),transparent 60%),
+    radial-gradient(600px 400px at 85% 20%,rgba(108,182,255,.06),transparent 60%)}
+
+  /* Nav */
+  nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(10px);background:rgba(11,13,18,.7);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+  .brand{font-family:var(--mono);font-weight:700;letter-spacing:.5px}
+  .brand b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .nav-links{display:flex;gap:26px;align-items:center;font-size:14px;color:var(--muted)}
+  .nav-links a:hover{color:var(--txt)}
+  .btn{display:inline-flex;align-items:center;gap:8px;border-radius:9px;padding:9px 16px;font-weight:600;font-size:14px;border:1px solid var(--line);transition:.15s}
+  .btn-gold{background:var(--grad);color:#1a1206;border:none}
+  .btn-gold:hover{filter:brightness(1.07);transform:translateY(-1px)}
+  .btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+  @media(max-width:720px){.nav-links a:not(.btn){display:none}}
+
+  /* Hero */
+  header{padding:90px 0 70px;text-align:center}
+  .badge-pill{display:inline-flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);border:1px solid var(--line);background:var(--card);border-radius:100px;padding:6px 14px;margin-bottom:26px}
+  .badge-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  h1{font-size:clamp(36px,6vw,64px);font-weight:800;line-height:1.05;letter-spacing:-1.5px}
+  h1 .g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:clamp(17px,2.4vw,21px);color:var(--muted);max-width:660px;margin:22px auto 0}
+  .cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:34px}
+  .install{margin:30px auto 0;max-width:430px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#0a0c11;border:1px solid var(--line);border-radius:11px;padding:14px 18px;font-family:var(--mono);font-size:15px}
+  .install span{color:var(--green)}.install .pkg{color:var(--txt)}
+  .copy{cursor:pointer;color:var(--dim);border:none;background:none;font-family:var(--mono);font-size:12px}
+  .copy:hover{color:var(--gold)}
+  .engines{margin-top:40px;display:flex;gap:10px 22px;justify-content:center;flex-wrap:wrap;color:var(--dim);font-size:14px;font-family:var(--mono)}
+  .engines b{color:var(--muted);font-weight:500}
+
+  /* Code showcase */
+  .showcase{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;margin-top:30px}
+  @media(max-width:860px){.showcase{grid-template-columns:1fr}}
+  .codecard{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .codecard .top{display:flex;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid var(--line);background:var(--bg2)}
+  .codecard .top .d{width:11px;height:11px;border-radius:50%}
+  .codecard .fn{margin-left:8px;font-family:var(--mono);font-size:12px;color:var(--dim)}
+  pre{padding:18px 20px;overflow-x:auto;font-family:var(--mono);font-size:13.5px;line-height:1.7}
+  .k{color:var(--violet)}.s{color:var(--green)}.c{color:var(--dim)}.n{color:var(--blue)}.y{color:var(--gold)}
+
+  /* Sections */
+  section{padding:72px 0;border-top:1px solid var(--line)}
+  .eyebrow{font-family:var(--mono);font-size:13px;color:var(--amber);text-transform:uppercase;letter-spacing:2px}
+  h2{font-size:clamp(26px,4vw,38px);font-weight:800;letter-spacing:-.8px;margin:10px 0 14px}
+  .lead{color:var(--muted);max-width:640px;font-size:17px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:42px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.grid{grid-template-columns:1fr}}
+  .feat{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:24px;transition:.15s}
+  .feat:hover{border-color:#33405a;transform:translateY(-2px)}
+  .feat .ico{font-size:22px;margin-bottom:12px}
+  .feat h3{font-size:16px;font-weight:700;margin-bottom:6px}
+  .feat p{color:var(--muted);font-size:14px}
+
+  /* Stats */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:14px}
+  @media(max-width:680px){.stats{grid-template-columns:1fr 1fr}}
+  .stat{text-align:center;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:26px 14px}
+  .stat .num{font-size:34px;font-weight:800;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;font-family:var(--mono)}
+  .stat .lbl{color:var(--muted);font-size:13px;margin-top:4px}
+
+  /* Steps */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:42px}
+  @media(max-width:760px){.steps{grid-template-columns:1fr}}
+  .step .no{font-family:var(--mono);font-size:13px;color:var(--gold);border:1px solid var(--line);border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+  .step h3{font-size:17px;margin-bottom:6px}.step p{color:var(--muted);font-size:14px}
+
+  /* Footer */
+  footer{border-top:1px solid var(--line);padding:46px 0;color:var(--dim);font-size:14px}
+  footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:18px;align-items:center}
+  footer a{color:var(--muted)}footer a:hover{color:var(--gold)}
+  .flinks{display:flex;gap:22px;flex-wrap:wrap}
+  .center{text-align:center}
+</style>
+</head>
+<body>
+<div class="glow"></div>
+
+<nav><div class="wrap">
+  <div class="brand">M<b>AESTRO</b></div>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#how">How it works</a>
+    <a href="https://github.com/tiagojcperez/maestro-cli#readme">Docs</a>
+    <a class="btn btn-ghost" href="https://github.com/tiagojcperez/maestro-cli">GitHub ★</a>
+  </div>
+</div></nav>
+
+<header><div class="wrap">
+  <div class="badge-pill"><span class="dot"></span> v2.5.0 · MIT · Python ≥3.11 · on PyPI</div>
+  <h1>Orchestrate AI agents<br>from a <span class="g">single YAML file</span></h1>
+  <p class="sub">Maestro turns a YAML file into a parallel, dependency-aware pipeline of AI agents and shell commands — with DAG scheduling, context passing, budgets, quality gates and deterministic logs. One CLI, seven engines.</p>
+  <div class="cta">
+    <a class="btn btn-gold" href="https://pypi.org/project/maestro-ai-cli/">⬇ Install from PyPI</a>
+    <a class="btn btn-ghost" href="https://github.com/tiagojcperez/maestro-cli">View on GitHub</a>
+  </div>
+  <div class="install">
+    <div><span>pip install</span> <span class="pkg">maestro-ai-cli</span></div>
+    <button class="copy" onclick="navigator.clipboard.writeText('pip install maestro-ai-cli');this.textContent='copied!';setTimeout(()=>this.textContent='copy',1400)">copy</button>
+  </div>
+  <div class="engines">
+    <b>Engines:</b> Codex · Claude · Gemini · Copilot · Qwen · Ollama · Llama
+  </div>
+</div></header>
+
+<section style="border-top:none;padding-top:0"><div class="wrap">
+  <div class="showcase">
+    <div class="codecard">
+      <div class="top"><span class="d" style="background:#ff5f56"></span><span class="d" style="background:#ffbd2e"></span><span class="d" style="background:#27c93f"></span><span class="fn">pipeline.yaml</span></div>
+<pre><span class="k">version</span>: <span class="n">1</span>
+<span class="k">name</span>: ship-feature
+<span class="k">tasks</span>:
+  - <span class="k">id</span>: implement
+    <span class="k">engine</span>: <span class="y">claude</span>
+    <span class="k">model</span>: sonnet
+    <span class="k">prompt</span>: <span class="s">"Implement the /export endpoint"</span>
+
+  - <span class="k">id</span>: review
+    <span class="k">engine</span>: <span class="y">codex</span>
+    <span class="k">depends_on</span>: [implement]   <span class="c"># runs after</span>
+    <span class="k">context_from</span>: [implement]  <span class="c"># sees its output</span>
+    <span class="k">prompt</span>: <span class="s">"Review the diff for bugs"</span>
+
+  - <span class="k">id</span>: tests
+    <span class="k">command</span>: <span class="s">"pytest -q"</span>
+    <span class="k">depends_on</span>: [implement]   <span class="c"># parallel w/ review</span></pre>
+    </div>
+    <div class="codecard">
+      <div class="top"><span class="d" style="background:#ff5f56"></span><span class="d" style="background:#ffbd2e"></span><span class="d" style="background:#27c93f"></span><span class="fn">terminal</span></div>
+<pre><span class="c">$</span> maestro run pipeline.yaml <span class="y">--parallel</span>
+
+<span class="y">[maestro]</span> starting implement <span class="c">[sonnet]</span>
+<span class="y">[maestro]</span> starting tests <span class="c">[shell]</span>
+<span class="s">✓</span> implement  ok   42s   $0.18
+<span class="s">✓</span> tests      ok   11s
+<span class="y">[maestro]</span> starting review <span class="c">[gpt-5.4@high]</span>
+<span class="s">✓</span> review     ok   28s   $0.09
+
+<span class="c"># 3 ok / 0 failed · $0.27 · 1m11s</span>
+<span class="c"># → .maestro-runs/&lt;ts&gt;/run_summary.md</span></pre>
+    </div>
+  </div>
+</div></section>
+
+<section id="features"><div class="wrap">
+  <div class="eyebrow">Why Maestro</div>
+  <h2>A control plane for multi-agent work</h2>
+  <p class="lead">Declare the pipeline once. Maestro handles scheduling, context, cost, quality and reproducibility — so you stop gluing engine CLIs together with bash.</p>
+  <div class="grid">
+    <div class="feat"><div class="ico">🧬</div><h3>DAG scheduling</h3><p>Dependencies resolve automatically; independent tasks run in parallel via a thread pool. Cycles are caught at validation.</p></div>
+    <div class="feat"><div class="ico">🔀</div><h3>7 engines, 1 schema</h3><p>Codex, Claude, Gemini, Copilot, Qwen, Ollama and Llama — plus raw shell. Mix them in one plan; route by cost or complexity.</p></div>
+    <div class="feat"><div class="ico">🧠</div><h3>9 context modes</h3><p>Pass upstream output downstream — raw, summarized, map-reduce, recursive, layered, BM25-selective, structural, council or knowledge-graph.</p></div>
+    <div class="feat"><div class="ico">✅</div><h3>Quality gates</h3><p>Per-task <code>verify_command</code>, typed asserts, and LLM judges (rubrics, G-Eval, debate, quorum) that can fail, warn or retry.</p></div>
+    <div class="feat"><div class="ico">💰</div><h3>Cost &amp; token budgets</h3><p>Per-run pricing tables, soft <code>max_cost_usd</code> limits, cross-run ledgers and warnings before you overspend.</p></div>
+    <div class="feat"><div class="ico">🛡️</div><h3>Security built in</h3><p>23 audit rules (<code>maestro audit</code>), untrusted-context taint tracking, prompt-injection containment and tool allow-lists.</p></div>
+    <div class="feat"><div class="ico">🔁</div><h3>Resilient by default</h3><p>Retries with backoff, model escalation, cross-engine fallback, circuit breakers and adaptive re-planning on failure.</p></div>
+    <div class="feat"><div class="ico">📦</div><h3>Deterministic artifacts</h3><p>Every run writes JSON manifests, transcripts and hash-chained event logs you can <code>maestro verify</code>, <code>diff</code> and <code>replay</code>.</p></div>
+    <div class="feat"><div class="ico">🔌</div><h3>Protocols &amp; SDK</h3><p>MCP server, AG-UI &amp; OpenTelemetry export, a Web UI, an interactive shell, and a typed Python SDK (<code>py.typed</code>).</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap center">
+  <div class="eyebrow center">Engineered, not vibes</div>
+  <h2>Quality you can audit</h2>
+  <div class="stats">
+    <div class="stat"><div class="num">7</div><div class="lbl">AI engines</div></div>
+    <div class="stat"><div class="num">27</div><div class="lbl">CLI commands</div></div>
+    <div class="stat"><div class="num">13k+</div><div class="lbl">tests, ~100% cov</div></div>
+    <div class="stat"><div class="num">1</div><div class="lbl">required dependency</div></div>
+  </div>
+  <p class="lead center" style="margin:26px auto 0">PyYAML is the only hard dependency — everything else is stdlib or optional. Strict <code>mypy</code>, SonarCloud gate green, all-A ratings.</p>
+</div></section>
+
+<section id="how"><div class="wrap">
+  <div class="eyebrow">How it works</div>
+  <h2>From file to pipeline in three steps</h2>
+  <div class="steps">
+    <div class="step"><div class="no">01</div><h3>Declare</h3><p>Write a <code>version: 1</code> plan: tasks, engines, prompts, dependencies and gates. Validate it offline with <code>maestro check</code>.</p></div>
+    <div class="step"><div class="no">02</div><h3>Run</h3><p><code>maestro run plan.yaml --parallel</code>. Maestro schedules the DAG, shells out to each engine, passes context and tracks cost live.</p></div>
+    <div class="step"><div class="no">03</div><h3>Inspect</h3><p>Get a <code>run_summary.md</code>, structured manifests and replayable logs. Compare runs with <code>diff</code>, trace failures with <code>blame</code>.</p></div>
+  </div>
+  <div class="cta" style="justify-content:flex-start;margin-top:40px">
+    <a class="btn btn-gold" href="https://github.com/tiagojcperez/maestro-cli#readme">Read the docs →</a>
+    <a class="btn btn-ghost" href="https://pypi.org/project/maestro-ai-cli/">pip install maestro-ai-cli</a>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <div><span class="brand">M<b>AESTRO</b></span> &nbsp;·&nbsp; Open source under MIT</div>
+  <div class="flinks">
+    <a href="https://github.com/tiagojcperez/maestro-cli">GitHub</a>
+    <a href="https://pypi.org/project/maestro-ai-cli/">PyPI</a>
+    <a href="https://github.com/tiagojcperez/maestro-cli#readme">Docs</a>
+    <a href="https://github.com/tiagojcperez/maestro-cli/blob/main/docs/SECURITY.md">Security</a>
+  </div>
+</div></footer>
+
+</body>
+</html>
